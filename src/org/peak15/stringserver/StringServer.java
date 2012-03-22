@@ -153,12 +153,12 @@ public class StringServer implements Runnable {
         				// Must be a read or write operation.
         				if((ops & SelectionKey.OP_READ) == SelectionKey.OP_READ) {
         					try {
-        						// Gobble up all the objects immediately available.
+        						// Gobble up all the strings immediately available.
         						while(true) {
-        							Object object = fromConnection.tcp.readObject(fromConnection);
-        							if(object == null) break;
-        							printDbg(fromConnection + " received: " + (object == null ? "null" : object.getClass().getSimpleName()));
-        							fromConnection.notifyReceived(object);
+        							String string = fromConnection.tcp.readString(fromConnection);
+        							if(string == null || string.equals("")) break;
+        							printDbg(fromConnection + " received string.");
+        							fromConnection.notifyReceived(string);
         						}
         					} catch(IOException e) {
         						printDbg(fromConnection + " warning: " + e.getMessage());
@@ -233,28 +233,28 @@ public class StringServer implements Runnable {
 	}
 	
 	/**
-	 * Send object to all clients except the one with the specified ID.
+	 * Send string to all clients except the one with the specified ID.
 	 * @param connectionID Client ID to omit.
-	 * @param object Object to send. Must be included in this server's SerializationScheme.
+	 * @param string String to send.
 	 */
-	public void sendToAllExcept(int connectionID, Object object) {
+	public void sendToAllExcept(int connectionID, String string) {
 		//TODO: Implement.
 	}
 	
 	/**
-	 * Send object to all clients.
-	 * @param object Object to send. Must be included in this server's SerializationScheme.
+	 * Send string to all clients.
+	 * @param string String to send.
 	 */
-	public void sendToAll(Object object) {
+	public void sendToAll(String string) {
 		//TODO: Implement.
 	}
 	
 	/**
-	 * Send object to specified client.
+	 * Send string to specified client.
 	 * @param connectionID Client ID to send to.
-	 * @param object Object to send. Must be included in this server's SerializationScheme.
+	 * @param string String to send.
 	 */
-	public void sendTo(int connectionID, Object object) {
+	public void sendTo(int connectionID, String string) {
 		//TODO: Implement.
 	}
 	

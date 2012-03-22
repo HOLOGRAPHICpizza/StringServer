@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.SocketChannel;
+
 /**
  * Represents a connection to the server.
  */
@@ -25,16 +26,15 @@ public class Connection {
 	}
 	
 	/**
-	 * Sends the object over the network.
-	 * @param object Object to send.
+	 * Sends the string over the network.
+	 * @param string String to send.
 	 * @return Number of bytes sent.
 	 */
-	public int send(Object object) {
-		if(object == null) throw new IllegalArgumentException("object cannot be null.");
+	public int send(String string) {
+		if(string == null || string.equals("")) throw new IllegalArgumentException("string cannot be null.");
 		try {
-			int length = tcp.send(this, object);
-			StringServer.printDbg(this + " sent: " +
-					(object == null ? "null" : object.getClass().getSimpleName()) + "(" + length + ")");
+			int length = tcp.send(this, string);
+			StringServer.printDbg(this + " sent " + length + " bytes.");
 			return length;
 		} catch(IOException e) {
 			StringServer.printDbg(this + " unable to send: " + e.getMessage());
@@ -90,11 +90,11 @@ public class Connection {
 	}
 	
 	/**
-	 * Notify the listener of the received object.
-	 * @param object Object to pass along.
+	 * Notify the listener of the received string.
+	 * @param string String to pass along.
 	 */
-	public void notifyReceived(Object object) {
-		listener.received(this, object);
+	public void notifyReceived(String string) {
+		listener.received(this, string);
 	}
 	
 	/**

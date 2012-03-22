@@ -2,7 +2,7 @@ package org.peak15.stringserver;
 
 public interface Listener {
 	/**
-     * Called when the remote end has been connected. This will be invoked before any objects
+     * Called when the remote end has been connected. This will be invoked before any strings
      * are received by received(). This will be invoked on the same thread as Server.update().
      * This method should not block for long periods as other network activity will not be processed
      * until it returns.
@@ -16,11 +16,11 @@ public interface Listener {
     public void disconnected(Connection connection);
 
     /**
-     * Called when an object has been received from the remote end of the connection.
+     * Called when a string has been received from the remote end of the connection.
      * This will be invoked on the same thread as Server.update().
      * This method should not block for long periods as other network
      * activity will not be processed until it returns.
      */
-    public void received(Connection connection, Object object);
+    public void received(Connection connection, String string);
 
 }

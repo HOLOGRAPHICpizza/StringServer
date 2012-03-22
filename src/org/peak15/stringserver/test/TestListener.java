@@ -16,9 +16,9 @@ public class TestListener implements Listener {
 	}
 
 	@Override
-	public void received(Connection connection, Object object) {
-		System.out.println("Recieved " + object + " on " + connection + ".");
-		StringServerTest.recieved = object.toString();
+	public void received(Connection connection, String string) {
+		System.out.println("Recieved " + string + " on " + connection + ".");
+		StringServerTest.recieved = string.toString();
 	}
 
 }

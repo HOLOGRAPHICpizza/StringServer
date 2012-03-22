@@ -33,12 +33,12 @@ public class TcpConnection {
 	}
 	
 	/**
-	 * Read an object from a connection.
+	 * Read a string from a connection.
 	 * @param connection Connection to read from.
-	 * @return Object read.
-	 * @throws IOException If object could not be read.
+	 * @return String read.
+	 * @throws IOException If string could not be read.
 	 */
-	public Object readObject(Connection connection) throws IOException {
+	public String readString(Connection connection) throws IOException {
 		if(socketChannel == null) throw new SocketException("Connection is closed.");
 		
 		readBuffer.compact();
@@ -118,18 +118,17 @@ public class TcpConnection {
 	}
 
 	/**
-	 * Send an object across a connection.
+	 * Send a string over a connection.
 	 * @param connection Connection to send across.
-	 * @param object Object to send.
+	 * @param string String to send.
 	 * @return Number of bytes sent.
 	 */
-	public int send(Connection connection, Object object) throws IOException {
+	public int send(Connection connection, String string) throws IOException {
 		if(socketChannel == null) throw new SocketException("Connection is closed.");
 		synchronized(writeLock) {
 			tempWriteBuffer.clear();
 			
 			// Put the string in the temp buffer.
-			String string = object.toString();
 			CharBuffer cb = CharBuffer.allocate(string.length());
 			cb.put(string);
 			charEncoder.encode(cb, tempWriteBuffer, true);
@@ -142,7 +141,7 @@ public class TcpConnection {
 				} //else
 				
 			} catch(BufferOverflowException e) {
-				throw new IOException("Write buffer limit exceeded writing:" + object.getClass().getName(), e);
+				throw new IOException("Write buffer limit exceeded writing:" + string.getClass().getName(), e);
 			}
 		}
 		
