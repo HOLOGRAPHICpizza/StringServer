@@ -13,7 +13,11 @@ import java.util.Set;
 
 /**
  * NIO server wrapper for dealing exclusively in simple strings, i.e. telnet, HTTP, etc...
- * Heavily inspired by the excellent KryoNet (http://code.google.com/p/kryonet/)
+ * Based on the excellent KryoNet library. (http://code.google.com/p/kryonet/)
+ * Released under the New BSD License.
+ * 
+ * To use StringServer, instantiate this class with a Listener, call start(), then call bind().
+ * 
  * @author Michael Craft <mcraft@peak15.org>
  * @author Nathan Sweet <misc@n4te.com>
  */

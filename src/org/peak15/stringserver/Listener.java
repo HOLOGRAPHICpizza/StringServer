@@ -1,5 +1,8 @@
 package org.peak15.stringserver;
 
+/**
+ * Programs that use StringServer define the server's behavior by implementing this interface.
+ */
 public interface Listener {
 	/**
      * Called when the remote end has been connected. This will be invoked before any strings

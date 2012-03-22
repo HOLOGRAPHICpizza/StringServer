@@ -12,6 +12,9 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 
+/**
+ * Handles the actual TCP transactions of a Connection.
+ */
 public class TcpConnection {
 	private static final CharsetEncoder charEncoder = Charset.forName("US-ASCII").newEncoder();
 	
