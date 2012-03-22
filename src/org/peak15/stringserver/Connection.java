@@ -31,7 +31,7 @@ public class Connection {
 	 * @return Number of bytes sent.
 	 */
 	public int send(String string) {
-		if(string == null || string.equals("")) throw new IllegalArgumentException("string cannot be null.");
+		if(string == null || string.equals("")) throw new IllegalArgumentException("String cannot be null.");
 		try {
 			int length = tcp.send(this, string);
 			StringServer.printDbg(this + " sent " + length + " bytes.");

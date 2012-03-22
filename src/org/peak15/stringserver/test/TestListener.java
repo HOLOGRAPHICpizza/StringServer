@@ -17,8 +17,8 @@ public class TestListener implements Listener {
 
 	@Override
 	public void received(Connection connection, String string) {
-		System.out.println("Recieved " + string + " on " + connection + ".");
-		StringServerTest.recieved = string.toString();
+		// Just spit it back to all the clients.
+		StringServerTest.server.sendToAll(string);
 	}
 
 }

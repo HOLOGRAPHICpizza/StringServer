@@ -242,7 +242,10 @@ public class StringServer implements Runnable {
 	 * @param string String to send.
 	 */
 	public void sendToAllExcept(int connectionID, String string) {
-		//TODO: Implement.
+		for(Connection c : connections) {
+			if(c.id != connectionID)
+				c.send(string);
+		}
 	}
 	
 	/**
@@ -250,7 +253,9 @@ public class StringServer implements Runnable {
 	 * @param string String to send.
 	 */
 	public void sendToAll(String string) {
-		//TODO: Implement.
+		for(Connection c : connections) {
+			c.send(string);
+		}
 	}
 	
 	/**
@@ -259,7 +264,12 @@ public class StringServer implements Runnable {
 	 * @param string String to send.
 	 */
 	public void sendTo(int connectionID, String string) {
-		//TODO: Implement.
+		for(Connection c : connections) {
+			if(c.id == connectionID) {
+				c.send(string);
+				break;
+			}
+		}
 	}
 	
 	/**

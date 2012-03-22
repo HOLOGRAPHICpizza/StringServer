@@ -18,7 +18,7 @@ import java.nio.charset.CharsetEncoder;
 public class TcpConnection {
 	private static final CharsetEncoder charEncoder = Charset.forName("US-ASCII").newEncoder();
 	
-	private final ByteBuffer readBuffer, writeBuffer, tempWriteBuffer;
+	private final ByteBuffer readBuffer, writeBuffer;
 	private SelectionKey selectionKey;
 	private final Object writeLock = new Object();
 	
@@ -29,8 +29,7 @@ public class TcpConnection {
 	 * @param scheme SerializationScheme to use.
 	 */
 	public TcpConnection() {
-		this.writeBuffer = ByteBuffer.allocate(16384);
-		this.tempWriteBuffer = ByteBuffer.allocate(2048);
+		this.writeBuffer = ByteBuffer.allocate(2048);
 		this.readBuffer = ByteBuffer.allocate(2048);
 		this.readBuffer.flip();
 	}
@@ -129,25 +128,37 @@ public class TcpConnection {
 	public int send(Connection connection, String string) throws IOException {
 		if(socketChannel == null) throw new SocketException("Connection is closed.");
 		synchronized(writeLock) {
-			tempWriteBuffer.clear();
+			writeBuffer.clear();
 			
-			// Put the string in the temp buffer.
+			// Put the string in the buffer.
 			CharBuffer cb = CharBuffer.allocate(string.length());
 			cb.put(string);
-			charEncoder.encode(cb, tempWriteBuffer, true);
+			charEncoder.encode(cb, writeBuffer, true);
 			charEncoder.reset();
 			
 			try {
 				if(writeBuffer.position() > 0) {
 					// Other data already queued, append to be written later.
 					writeBuffer.put(tempWriteBuffer);
-				} //else
-				
+				}
+				else if(!writeToSocket(tempWriteBuffer)) {
+					// A partial write occurred, queue the remaining data to be written later.
+					writeBuffer.put(tempWriteBuffer);
+					// Set OP_WRITE to be notified when more writing can occur.
+					selectionKey.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+				}
 			} catch(BufferOverflowException e) {
-				throw new IOException("Write buffer limit exceeded writing:" + string.getClass().getName(), e);
+				throw new IOException("Write buffer limit exceeded.", e);
 			}
+			
+			if(StringServer.debug) {
+				float percentage = writeBuffer.position() / (float)writeBuffer.capacity();
+				if(percentage > 0.75) {
+					StringServer.printDbg("Write buffer is approaching capacity:" + (percentage * 100) + "%");
+				}
+			}
+			
+			return tempWriteBuffer.limit();
 		}
-		
-		return -1;
 	}
 }
