@@ -7,34 +7,30 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 /**
  * NIO server wrapper for dealing exclusively in simple strings, i.e. telnet, HTTP, etc...
  * Heavily inspired by the excellent KryoNet (http://code.google.com/p/kryonet/)
  * @author Michael Craft <mcraft@peak15.org>
+ * @author Nathan Sweet <misc@n4te.com>
  */
 public class StringServer implements Runnable {
 	private boolean running = false;
 	private Selector selector;
 	private Object updateLock = new Object();
 	private ServerSocketChannel serverChannel;
-	private UdpConnection udp;
 	private Set<Connection> connections = new HashSet<Connection>();
 	private int nextConnectionID = 1;
 	private Listener listener;
-	private Map<Integer, Connection> pendingConnections = new HashMap<Integer, Connection>();
 	
 	public static boolean debug = false;
 	
 	private void acceptOperation(SocketChannel socketChannel) {
 		Connection connection = new Connection(listener);
 		connection.server = this;
-		if(udp != null) connection.udp = udp;
 		try {
 			SelectionKey selectionKey = connection.tcp.accept(selector, socketChannel);
 			selectionKey.attach(connection);
@@ -44,15 +40,12 @@ public class StringServer implements Runnable {
 			connection.id = id;
 			connection.setConnected(true);
 			
-			if(udp == null)
-				connections.add(connection);
-			else
-				pendingConnections.put(id, connection);
+			connections.add(connection);
 			
-			if(udp == null) connection.notifyConnected();
+			connection.notifyConnected();
 		} catch(IOException e) {
 			connection.close();
-			printDbg("Unable to accept TCP connection: " + e);
+			printDbg("Unable to accept connection: " + e);
 		}
 	}
 	
@@ -99,46 +92,29 @@ public class StringServer implements Runnable {
 	}
 	
 	/**
-	 * Opens a TCP only server on the specified port.
-	 * @param tcpPort Port to listen on.
+	 * Opens a server on the specified port.
+	 * @param port Port to listen on.
 	 * @throws IOException if the port could not be bound to.
 	 */
-	public void bind(int tcpPort) throws IOException {
-		bind(new InetSocketAddress(tcpPort), null);
+	public void bind(int port) throws IOException {
+		bind(new InetSocketAddress(port));
 	}
 	
 	/**
-	 * Opens a TCP and UDP server on the specified ports.
-	 * @param tcpPort TCP port to listen on.
-	 * @param udpPort UDP port to listen on.
-	 * @throws IOException if the ports could not be bound to.
+	 * Opens a server on the specified InetSocketAddesses.
+	 * @param socket Socket to listen on.
+	 * @throws IOException if the socket could not be bound to.
 	 */
-	public void bind(int tcpPort, int udpPort) throws IOException {
-		bind(new InetSocketAddress(tcpPort), new InetSocketAddress(udpPort));
-	}
-	
-	/**
-	 * Opens a TCP and UDP server on the specified InetSocketAddesses.
-	 * @param tcpPort TCP socket to listen on.
-	 * @param udpPort UDP socket to listen on. May be null.
-	 * @throws IOException if the ports could not be bound to.
-	 */
-	public void bind (InetSocketAddress tcpPort, InetSocketAddress udpPort) throws IOException {
+	public void bind(InetSocketAddress socket) throws IOException {
 		close();
 		synchronized(updateLock) {
 			selector.wakeup();
 			try {
 				serverChannel = selector.provider().openServerSocketChannel();
-				serverChannel.socket().bind(tcpPort);
+				serverChannel.socket().bind(socket);
 				serverChannel.configureBlocking(false);
 				serverChannel.register(selector, SelectionKey.OP_ACCEPT);
-				printDbg("Accepting connections on port: " + tcpPort + "/TCP");
-				if(udpPort != null) {
-					udp = new UdpConnection();
-					udp.bind(selector, udpPort);
-					printDbg("Accepting connections on port: " + tcpPort + "/UDP");
-				}
-				
+				printDbg("Accepting connections on socket: " + socket);
 			} catch(IOException e) {
 				close();
 				throw e;
@@ -174,15 +150,14 @@ public class StringServer implements Runnable {
         			Connection fromConnection = (Connection) selectionKey.attachment();
         			
         			if(fromConnection != null) {
-        				// Must be a TCP read or write operation.
-        				if(udp != null && fromConnection.udpRemoteAddress == null) continue;
+        				// Must be a read or write operation.
         				if((ops & SelectionKey.OP_READ) == SelectionKey.OP_READ) {
         					try {
         						// Gobble up all the objects immediately available.
         						while(true) {
         							Object object = fromConnection.tcp.readObject(fromConnection);
         							if(object == null) break;
-        							printDbg(fromConnection + " received TCP: " + (object == null ? "null" : object.getClass().getSimpleName()));
+        							printDbg(fromConnection + " received: " + (object == null ? "null" : object.getClass().getSimpleName()));
         							fromConnection.notifyReceived(object);
         						}
         					} catch(IOException e) {
@@ -212,34 +187,6 @@ public class StringServer implements Runnable {
         				}
         				continue;
         			}
-        			
-        			// Must be a UDP read operation.
-        			if(udp == null) continue;
-        			InetSocketAddress fromAddress = null;
-        			try {
-        				fromAddress = udp.readFromAddress();
-        			} catch(IOException e) {
-        				printErr("Error reading UDP data: " + e.getMessage());
-        				continue;
-        			}
-        			if(fromAddress == null) continue;
-        			
-        			for(Connection connection : connections) {
-        				if(fromAddress.equals(connection.udpRemoteAddress)) {
-        					fromConnection = connection;
-        					break;
-        				}
-        			}
-        			
-        			Object object;
-        			object = udp.readObject(fromConnection);
-        			
-        			if(fromConnection != null) {
-        				printDbg(fromConnection + " received UDP: " + (object == null ? "null" : object.getClass().getSimpleName()));
-        				fromConnection.notifyReceived(object);
-        				continue;
-        			}
-        			printDbg("Ignoring UDP from unregistered address: " + fromAddress);
         		} catch (CancelledKeyException ignored) {
 					// Connection is closed.
 				}
@@ -268,11 +215,6 @@ public class StringServer implements Runnable {
 			serverChannel = null;
 		}
 		
-		if(udp != null) {
-			udp.close();
-			udp = null;
-		}
-		
 		// Select one last time to complete closing the socket.
         synchronized (updateLock) {
         selector.wakeup();
@@ -291,28 +233,28 @@ public class StringServer implements Runnable {
 	}
 	
 	/**
-	 * Send object to all clients over TCP except the one with the specified ID.
+	 * Send object to all clients except the one with the specified ID.
 	 * @param connectionID Client ID to omit.
 	 * @param object Object to send. Must be included in this server's SerializationScheme.
 	 */
-	public void sendToAllExceptTCP(int connectionID, Object object) {
+	public void sendToAllExcept(int connectionID, Object object) {
 		//TODO: Implement.
 	}
 	
 	/**
-	 * Send object to all clients over TCP.
+	 * Send object to all clients.
 	 * @param object Object to send. Must be included in this server's SerializationScheme.
 	 */
-	public void sendToAllTCP(Object object) {
+	public void sendToAll(Object object) {
 		//TODO: Implement.
 	}
 	
 	/**
-	 * Send object to specified client over TCP.
+	 * Send object to specified client.
 	 * @param connectionID Client ID to send to.
 	 * @param object Object to send. Must be included in this server's SerializationScheme.
 	 */
-	public void sendToTCP(int connectionID, Object object) {
+	public void sendTo(int connectionID, Object object) {
 		//TODO: Implement.
 	}
 	

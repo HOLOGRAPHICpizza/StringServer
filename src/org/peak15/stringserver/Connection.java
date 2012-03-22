@@ -3,16 +3,12 @@ package org.peak15.stringserver;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketException;
 import java.nio.channels.SocketChannel;
 /**
- * Represents a TCP and optionally a UDP connection between a client and a server.
+ * Represents a connection to the server.
  */
 public class Connection {
-	public InetSocketAddress udpRemoteAddress;
 	public TcpConnection tcp;
-	public UdpConnection udp;
 	public StringServer server;
 	public int id;
 	
@@ -29,47 +25,22 @@ public class Connection {
 	}
 	
 	/**
-	 * Sends the object over the network using TCP.
+	 * Sends the object over the network.
 	 * @param object Object to send.
 	 * @return Number of bytes sent.
 	 */
-	public int sendTCP(Object object) {
+	public int send(Object object) {
 		if(object == null) throw new IllegalArgumentException("object cannot be null.");
 		try {
 			int length = tcp.send(this, object);
-			StringServer.printDbg(this + " sent TCP: " +
+			StringServer.printDbg(this + " sent: " +
 					(object == null ? "null" : object.getClass().getSimpleName()) + "(" + length + ")");
 			return length;
 		} catch(IOException e) {
-			StringServer.printDbg(this + " unable to send TCP: " + e.getMessage());
+			StringServer.printDbg(this + " unable to send: " + e.getMessage());
 			close();
 			return 0;
 		}
-	}
-	
-	/**
-	 * Sends the object over the network using UDP.
-	 * @param object Object to send.
-	 * @return Number of bytes sent.
-	 */
-	public int sendUDP(Object object) {
-		if(object == null) throw new IllegalArgumentException("object cannot be null.");
-		SocketAddress address = udpRemoteAddress;
-		if (address == null && udp != null) address = udp.connectedAddress;
-        if (address == null && isConnected) throw new IllegalStateException("Connection is not connected via UDP.");
-		
-        try {
-        	if(address == null) throw new SocketException("Connection is closed.");
-        	
-        	int length = udp.send(this, object, address);
-        	StringServer.printDbg(this + " sent UDP: " +
-					(object == null ? "null" : object.getClass().getSimpleName()) + "(" + length + ")");
-        	return length;
-        } catch(IOException e) {
-        	StringServer.printDbg(this + " unable to send UDP: " + e.getMessage());
-			close();
-			return 0;
-        }
 	}
 	
 	/**
@@ -90,10 +61,10 @@ public class Connection {
     }
 	
     /**
-     * Get the remote TCP address.
+     * Get the remote address.
      * @return the IP address and port of the remote end of the connection, or null if this connection is not connected.
      */
-    public InetSocketAddress getRemoteAddressTCP() {
+    public InetSocketAddress getRemoteAddress() {
     	SocketChannel socketChannel = tcp.socketChannel;
     	if(socketChannel != null) {
     		Socket socket = tcp.socketChannel.socket();
@@ -104,16 +75,6 @@ public class Connection {
     	return null;
     }
     
-    /**
-     * Get the remote UDP address.
-     * @return the IP address and port of the remote end of the connection, or null if this connection is not connected.
-     */
-    public InetSocketAddress getRemoteAddressUDP() {
-    	InetSocketAddress connectedAddress = udp.connectedAddress;
-    	if(connectedAddress != null) return connectedAddress;
-    	return udpRemoteAddress;
-    }
-    
 	/**
 	 * Closes the connection.
 	 */
@@ -121,7 +82,6 @@ public class Connection {
 		boolean wasConnected = isConnected;
 		isConnected = false;
 		tcp.close();
-		if(udp != null && udp.connectedAddress != null) udp.close();
 		if(wasConnected) {
 			listener.disconnected(this);
 			StringServer.print(this + " disconnected.");

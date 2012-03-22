@@ -92,7 +92,7 @@ public class TcpConnection {
 			
 			selectionKey = socketChannel.register(selector, SelectionKey.OP_READ);
 			
-			StringServer.printDbg("Port " + socketChannel.socket().getLocalPort() + "/TCP connected to: "
+			StringServer.printDbg("Port " + socketChannel.socket().getLocalPort() + " connected to: "
 					+ socketChannel.socket().getRemoteSocketAddress());
 			
 			return selectionKey;
@@ -113,7 +113,7 @@ public class TcpConnection {
 				if(selectionKey != null) selectionKey.selector().wakeup();
 			}
 		} catch(IOException e) {
-			StringServer.printDbg("Unable to close TCP connection: " + e.getMessage());
+			StringServer.printDbg("Unable to close connection: " + e.getMessage());
 		}
 	}
 
