@@ -17,8 +17,10 @@ public class TestListener implements Listener {
 
 	@Override
 	public void received(Connection connection, String string) {
-		// Just spit it back to all the clients.
-		StringServerTest.server.sendToAll(string);
+		if(string.startsWith("ALL"))
+			StringServerTest.server.sendToAll(string);
+		else
+			StringServerTest.server.sendToAllExcept(connection.id, string);
 	}
 
 }
