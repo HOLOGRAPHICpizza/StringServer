@@ -30,6 +30,9 @@ public class StringServerTest {
 	public static String sendEXCEPT = "EXCEPT Sent to all but the sender.\n";
 	public static String recieved1 = null;
 	public static String recieved2 = null;
+	public static String recieved3 = null;
+	public static boolean notDone = true;
+	public static boolean notHaveTwo = true;
 	
 	public static void main(String[] args) {
 		//StringServer.debug = true;
@@ -81,8 +84,74 @@ public class StringServerTest {
 		TestClient.stop();
 		server.stop();
 		
-		if(recieved1.equals(sendALL.trim()) && recieved2.equals(sendEXCEPT.trim())
-				&& TestClient.recieved1.equals(sendALL.trim()) && (TestClient.recieved2 == null)) {
+		// Did test 1 pass?
+		boolean test1 = (recieved1.equals(sendALL.trim()) && recieved2.equals(sendEXCEPT.trim())
+				&& TestClient.recieved1.equals(sendALL.trim()) && (TestClient.recieved2 == null));
+		
+		// ------------------------------
+		// Test 2 - Send in strange chunks
+		// ------------------------------
+		System.out.println("\n---------- Test 2 ----------\n");
+		server = null;
+		sendALL = null;
+		sendEXCEPT = null;
+		recieved1 = null;
+		recieved2 = null;
+		recieved3 = null;
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		
+		// Start Server
+		server = new StringServer(new TestListener());
+		server.start();
+		try {
+			server.bind(1337);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		// Connect to the server
+		isa = new InetSocketAddress("localhost", 1337);
+		try(SocketChannel sc = SocketChannel.open()) {
+			// Connect
+			sc.connect(isa);
+			
+			// Send multipart incomplete message
+			sendALL = "ONE tacos\nTWO are good.\nTHREE usua";
+			ByteBuffer buffer = Charset.forName("US-ASCII").encode(sendALL);
+			System.out.println("Sending: " + sendALL);
+			sc.write(buffer);
+			
+			// block until we have two
+			while(notHaveTwo) {}
+			
+			// finish the message
+			sendALL = "lly.\n";
+			buffer = Charset.forName("US-ASCII").encode(sendALL);
+			System.out.println("Sending: " + sendALL);
+			sc.write(buffer);
+			
+			sc.close();
+			Thread.sleep(600);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		// Block until all are set
+		while(notDone) {}
+		
+		System.out.println(recieved1);
+		System.out.println(recieved2);
+		System.out.println(recieved3);
+		
+		server.stop();
+		
+		boolean test2 = (recieved1.equals("ONE tacos") && recieved2.equals("TWO are good.") && recieved3.equals("THREE usually."));
+		
+		if(test1 && test2) {
 			System.out.println("\nTest passed!");
 		}
 		else {

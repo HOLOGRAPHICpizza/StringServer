@@ -160,7 +160,7 @@ public class StringServer implements Runnable {
         						// Gobble up all the strings immediately available.
         						while(true) {
         							String string = fromConnection.tcp.readString(fromConnection);
-        							if(string == null || string.equals("")) break;
+        							if(string == null) break;
         							printDbg(fromConnection + " received string.");
         							fromConnection.notifyReceived(string);
         						}
@@ -234,7 +234,7 @@ public class StringServer implements Runnable {
 	 */
 	public void sendToAllExcept(int connectionID, String string) {
 		for(Connection c : connections) {
-			if(c.id != connectionID)
+			if(c.id != connectionID && c.id != 0)
 				c.send(string);
 		}
 	}
@@ -245,7 +245,8 @@ public class StringServer implements Runnable {
 	 */
 	public void sendToAll(String string) {
 		for(Connection c : connections) {
-			c.send(string);
+			if(c.id != 0)
+				c.send(string);
 		}
 	}
 	
@@ -256,7 +257,7 @@ public class StringServer implements Runnable {
 	 */
 	public void sendTo(int connectionID, String string) {
 		for(Connection c : connections) {
-			if(c.id == connectionID) {
+			if(c.id == connectionID && c.id != 0) {
 				c.send(string);
 				break;
 			}

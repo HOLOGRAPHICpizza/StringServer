@@ -10,6 +10,8 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /**
  * Handles the actual TCP transactions of a Connection.
@@ -21,6 +23,9 @@ public class TcpConnection {
 	private final CharBuffer charBuffer;
 	private SelectionKey selectionKey;
 	private final Object writeLock = new Object();
+	
+	private String currentString = "";
+	private Queue<String> readyStrings = new ArrayDeque<String>();
 	
 	public SocketChannel socketChannel;
 	
@@ -36,22 +41,40 @@ public class TcpConnection {
 	}
 	
 	/**
-	 * Read a string from a connection.
+	 * Returns the first string in the buffer, or null if the buffer is empty.
 	 * @param connection Connection to read from.
-	 * @return String read.
+	 * @return String read, or null if no string is ready.
 	 * @throws IOException If string could not be read.
 	 */
 	public String readString(Connection connection) throws IOException {
-		if(socketChannel == null) throw new SocketException("Connection is closed.");
+		boolean closed = (socketChannel == null);
+		int bytesRead = 0;
+		if(!closed) {
+			// Read bytes immediately available and add them to our buffer.
+			readBuffer.clear();
+			bytesRead = socketChannel.read(readBuffer);
+			readBuffer.flip();
+		}
 		
-		readBuffer.compact();
-		// Grab all bytes immediately available up to the limit of the buffer.
-		int bytesRead = socketChannel.read(readBuffer);
-		readBuffer.flip();
-		if(bytesRead == -1) throw new SocketException("Connection is closed.");
-		if(bytesRead < 1) return null;
+		if(bytesRead > 0) {
+			currentString += Charset.forName("US-ASCII").decode(readBuffer).toString();
+			
+			// Split this by newlines and add to the queue all but the last one
+			String[] lines = currentString.split("\n");
+			if(lines.length > 1) {
+				for(int i=0; i < lines.length - 1; i++) {
+					readyStrings.add(lines[i].trim());
+				}
+				currentString = lines[lines.length - 1];
+			}
+			else if(lines.length == 1 && currentString.endsWith("\n")) {
+				readyStrings.add(lines[0].trim());
+				currentString = "";
+			}
+		}
 		
-		return Charset.forName("US-ASCII").decode(readBuffer).toString().trim();
+		// Return a string from the queue, or null if the queue is empty.
+		return readyStrings.poll();
 	}
 	
 	/**

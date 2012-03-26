@@ -53,7 +53,7 @@ public class TestClient implements Runnable {
 			
 			sc.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 

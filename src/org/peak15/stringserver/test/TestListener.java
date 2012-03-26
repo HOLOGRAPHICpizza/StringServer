@@ -19,8 +19,18 @@ public class TestListener implements Listener {
 	public void received(Connection connection, String string) {
 		if(string.startsWith("ALL"))
 			StringServerTest.server.sendToAll(string);
-		else
+		else if(string.startsWith("EXCEPT"))
 			StringServerTest.server.sendToAllExcept(connection.id, string);
+		else if(string.startsWith("ONE"))
+			StringServerTest.recieved1 = string;
+		else if(string.startsWith("TWO")) {
+			StringServerTest.recieved2 = string;
+			StringServerTest.notHaveTwo = false;
+		}
+		else if(string.startsWith("THREE")) {
+			StringServerTest.recieved3 = string;
+			StringServerTest.notDone = false;
+		}
 	}
 
 }
