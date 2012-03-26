@@ -3,7 +3,6 @@ package org.peak15.stringserver;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.SelectionKey;
@@ -19,6 +18,7 @@ public class TcpConnection {
 	private static final CharsetEncoder charEncoder = Charset.forName("US-ASCII").newEncoder();
 	
 	private final ByteBuffer readBuffer, writeBuffer;
+	private final CharBuffer charBuffer;
 	private SelectionKey selectionKey;
 	private final Object writeLock = new Object();
 	
@@ -30,6 +30,7 @@ public class TcpConnection {
 	 */
 	public TcpConnection() {
 		this.writeBuffer = ByteBuffer.allocate(2048);
+		this.charBuffer = CharBuffer.allocate(2048);
 		this.readBuffer = ByteBuffer.allocate(2048);
 		this.readBuffer.flip();
 	}
@@ -51,31 +52,6 @@ public class TcpConnection {
 		if(bytesRead < 1) return null;
 		
 		return Charset.forName("US-ASCII").decode(readBuffer).toString().trim();
-	}
-
-	/**
-	 * Does a write operation.
-	 * @throws IOException
-	 */
-	public void writeOperation() throws IOException {
-		synchronized(writeLock) {
-			writeBuffer.flip();
-			if(writeToSocket(writeBuffer)) {
-				// Write successful, clear OP_WRITE
-				selectionKey.interestOps(SelectionKey.OP_READ);
-			}
-			writeBuffer.compact();
-		}
-	}
-	
-	private boolean writeToSocket(ByteBuffer buffer) throws IOException {
-		if(socketChannel == null) throw new SocketException("Connection is closed.");
-		
-		while(buffer.hasRemaining()) {
-			if(socketChannel.write(buffer) == 0) break;
-		}
-		
-		return !buffer.hasRemaining();
 	}
 	
 	/**
@@ -129,36 +105,16 @@ public class TcpConnection {
 		if(socketChannel == null) throw new SocketException("Connection is closed.");
 		synchronized(writeLock) {
 			writeBuffer.clear();
+			charBuffer.clear();
 			
 			// Put the string in the buffer.
-			CharBuffer cb = CharBuffer.allocate(string.length());
-			cb.put(string);
-			charEncoder.encode(cb, writeBuffer, true);
+			charBuffer.put(string);
+			charBuffer.flip();
+			charEncoder.encode(charBuffer, writeBuffer, true);
 			charEncoder.reset();
+			writeBuffer.flip();
 			
-			try {
-				if(writeBuffer.position() > 0) {
-					// Other data already queued, append to be written later.
-					writeBuffer.put(tempWriteBuffer);
-				}
-				else if(!writeToSocket(tempWriteBuffer)) {
-					// A partial write occurred, queue the remaining data to be written later.
-					writeBuffer.put(tempWriteBuffer);
-					// Set OP_WRITE to be notified when more writing can occur.
-					selectionKey.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-				}
-			} catch(BufferOverflowException e) {
-				throw new IOException("Write buffer limit exceeded.", e);
-			}
-			
-			if(StringServer.debug) {
-				float percentage = writeBuffer.position() / (float)writeBuffer.capacity();
-				if(percentage > 0.75) {
-					StringServer.printDbg("Write buffer is approaching capacity:" + (percentage * 100) + "%");
-				}
-			}
-			
-			return tempWriteBuffer.limit();
+			return socketChannel.write(writeBuffer);
 		}
 	}
 }

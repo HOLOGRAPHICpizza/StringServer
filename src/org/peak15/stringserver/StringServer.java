@@ -169,15 +169,6 @@ public class StringServer implements Runnable {
         						fromConnection.close();
         					}
         				}
-        				
-        				if ((ops & SelectionKey.OP_WRITE) == SelectionKey.OP_WRITE) {
-        					try {
-        						fromConnection.tcp.writeOperation();
-        					} catch(IOException e) {
-        						printDbg(fromConnection + " update: " + e.getMessage());
-        						fromConnection.close();
-        					}
-        				}
         				continue;
         			}
         			
