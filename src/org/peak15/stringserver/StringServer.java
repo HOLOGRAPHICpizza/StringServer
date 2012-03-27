@@ -68,7 +68,7 @@ public class StringServer implements Runnable {
 	
 	/**
 	 * Print to standard output.
-	 * @param out Object to print.
+	 * @param obj Object to print.
 	 */
 	public static void print(Object obj) {
 		System.out.print("StringServer: ");
@@ -77,7 +77,7 @@ public class StringServer implements Runnable {
 	
 	/**
 	 * Print an error.
-	 * @param out Object to print.
+	 * @param obj Object to print.
 	 */
 	public static void printErr(Object obj) {
 		System.out.print("StingServer ERROR: ");
@@ -86,7 +86,7 @@ public class StringServer implements Runnable {
 	
 	/**
 	 * Print a debug message.
-	 * @param out Object to print.
+	 * @param obj Object to print.
 	 */
 	public static void printDbg(Object obj) {
 		if(debug) {

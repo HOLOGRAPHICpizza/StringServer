@@ -30,8 +30,7 @@ public class TcpConnection {
 	public SocketChannel socketChannel;
 	
 	/**
-	 * Creates a TcpConnection using the given scheme.
-	 * @param scheme SerializationScheme to use.
+	 * Creates a TcpConnection.
 	 */
 	public TcpConnection() {
 		this.writeBuffer = ByteBuffer.allocate(2048);
